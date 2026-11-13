@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'sha256-NQvDnx7Ig8NIGWvPS+ABOYeHuWqvKpasHCFgGL8j4N0='; connect-src https://klbvelcaxxorejzqyshh.supabase.co; base-uri 'none'; form-action 'none'">
+<title>ProsperPath</title>
+<!--
+  ProsperPath email-link page (Supabase "Site URL").
+  Supabase's default emails link here AFTER Supabase has already verified the link:
+    • sign-up confirmation  → shows "Email confirmed"; the app signs the person in when they return
+    • password reset        → lets the person choose a new password, then sign in in the app
+    • expired / used link   → explains what to do
+  The sign-in tokens Supabase adds after "#" are removed from the address bar immediately,
+  used only for a password reset (sent straight to Supabase), and never stored.
+  Only the PUBLIC project URL and publishable key are in this file.
+-->
+<style>
+  :root { --red:#D71920; --black:#0A0A0A; --white:#FFFFFF; --bg:#F6F6F6; --muted:#5F5F5F; --border:#E4E4E4; --ok:#16A34A; }
+  @media (prefers-color-scheme: dark) {
+    :root { --red:#F0333B; --bg:#000000; --white:#141414; --black:#FFFFFF; --muted:#A3A3A3; --border:#2C2C2C; --ok:#22C55E; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--black); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; -webkit-text-size-adjust:100%; }
+  header { background:#D71920; color:#fff; text-align:center; padding:calc(28px + env(safe-area-inset-top)) 16px 72px; }
+  .wordmark { font-size:32px; font-weight:800; letter-spacing:-.5px; margin:0; }
+  .bar { width:44px; height:4px; border-radius:2px; background:#fff; margin:10px auto 0; }
+  main { max-width:440px; margin:-48px auto 32px; padding:0 16px; }
+  .card { background:var(--white); border:1px solid var(--border); border-radius:20px; padding:24px; box-shadow:0 4px 12px rgba(0,0,0,.06); }
+  h1 { font-size:26px; line-height:1.2; margin:12px 0 8px; }
+  p { font-size:16px; line-height:1.5; margin:0 0 12px; }
+  .muted { color:var(--muted); }
+  .icon { width:56px; height:56px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:30px; font-weight:800; color:#fff; }
+  .ok { background:var(--ok); } .bad { background:#D71920; } .info { background:#0A0A0A; }
+  ol { padding-left:22px; margin:8px 0 0; } li { margin:6px 0; line-height:1.45; }
+  label { display:block; font-size:13px; font-weight:600; color:var(--muted); margin:14px 0 6px; }
+  input { width:100%; font-size:17px; padding:13px 14px; border:1px solid var(--border); border-radius:14px; background:var(--white); color:var(--black); }
+  input:focus { outline:2px solid #D71920; outline-offset:1px; }
+  button { width:100%; margin-top:18px; min-height:50px; border:0; border-radius:14px; background:#D71920; color:#fff; font-size:17px; font-weight:700; }
+  button:disabled { opacity:.6; }
+  .msg { margin-top:14px; padding:12px 14px; border-radius:12px; font-size:15px; display:none; }
+  .msg.err { display:block; background:rgba(215,25,32,.1); color:var(--red); }
+  .show { margin-top:10px; font-size:14px; display:flex; gap:8px; align-items:center; color:var(--muted); }
+  .show input { width:auto; }
+  [hidden] { display:none !important; }
+</style>
+</head>
+<body>
+<header><p class="wordmark">ProsperPath</p><div class="bar"></div></header>
+<main><div class="card" id="card" aria-live="polite">
+  <noscript><h1>ProsperPath</h1><p>Please enable JavaScript to finish.</p></noscript>
+</div></main>
+
+<template id="t-confirmed">
+  <div class="icon ok" aria-hidden="true">✓</div>
+  <h1>Email confirmed</h1>
+  <p>Your ProsperPath account is ready.</p>
+  <ol>
+    <li>Go back to the <b>ProsperPath</b> app (in <b>Expo Go</b>).</li>
+    <li>You'll be signed in automatically. If not, tap <b>Sign in</b> and use your email and password.</li>
+  </ol>
+  <p class="muted" style="margin-top:14px">You can close this page.</p>
+</template>
+
+<template id="t-reset">
+  <div class="icon info" aria-hidden="true">🔑</div>
+  <h1>Choose a new password</h1>
+  <p class="muted" id="reset-for"></p>
+  <form id="reset-form" novalidate>
+    <label for="pw1">New password</label>
+    <input id="pw1" type="password" autocomplete="new-password" minlength="8" required>
+    <label for="pw2">Confirm new password</label>
+    <input id="pw2" type="password" autocomplete="new-password" minlength="8" required>
+    <div class="show"><input id="showpw" type="checkbox"><label for="showpw" style="margin:0">Show passwords</label></div>
+    <div class="msg" id="reset-msg" role="alert"></div>
+    <button type="submit" id="reset-btn">Save new password</button>
+  </form>
+</template>
+
+<template id="t-reset-done">
+  <div class="icon ok" aria-hidden="true">✓</div>
+  <h1>Password updated</h1>
+  <p>Go back to the <b>ProsperPath</b> app and sign in with your new password.</p>
+  <p class="muted">You can close this page.</p>
+</template>
+
+<template id="t-expired">
+  <div class="icon bad" aria-hidden="true">!</div>
+  <h1>This link has expired</h1>
+  <p>Email links work once and expire after about an hour. Email apps sometimes open links in advance, which also uses them up.</p>
+  <ol>
+    <li><b>Confirming your email?</b> Go back to the app and try <b>Sign in</b> — you may already be confirmed. If not, tap <b>Send the link again</b>.</li>
+    <li><b>Resetting your password?</b> In the app, tap <b>Forgot password?</b> to get a new link.</li>
+  </ol>
+</template>
+
+<template id="t-other">
+  <div class="icon ok" aria-hidden="true">✓</div>
+  <h1>Done</h1>
+  <p>Go back to the <b>ProsperPath</b> app to continue.</p>
+</template>
+
+<template id="t-home">
+  <div class="icon info" aria-hidden="true">P</div>
+  <h1>ProsperPath</h1>
+  <p>This page finishes email confirmations and password resets for the ProsperPath app.</p>
+  <p class="muted">Open the ProsperPath app to sign in.</p>
+</template>
+
+<script>
+(function () {
+  var SUPABASE_URL = 'https://klbvelcaxxorejzqyshh.supabase.co';
+  var PUBLISHABLE_KEY = 'sb_publishable_VFI5AcfHnSJY4YJkpVB07Q_CqzaJjla';
+  var MIN_PASSWORD = 8;
+
+  function readParams() {
+    var out = {};
+    var parts = [location.search.slice(1), location.hash.slice(1)];
+    parts.forEach(function (part) {
+      part.split('&').forEach(function (pair) {
+        if (!pair) return;
+        var i = pair.indexOf('=');
+        var k = decodeURIComponent((i < 0 ? pair : pair.slice(0, i)).replace(/\+/g, ' '));
+        out[k] = i < 0 ? '' : decodeURIComponent(pair.slice(i + 1).replace(/\+/g, ' '));
+      });
+    });
+    return out;
+  }
+
+  var p = readParams();
+  // Remove tokens from the address bar and history straight away.
+  if (location.hash || location.search) history.replaceState(null, '', location.pathname);
+
+  var card = document.getElementById('card');
+  function show(id) {
+    card.innerHTML = '';
+    card.appendChild(document.getElementById(id).content.cloneNode(true));
+  }
+  function emailFromToken(token) {
+    try {
+      var b = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+      return JSON.parse(decodeURIComponent(escape(atob(b + '==='.slice((b.length + 3) % 4))))).email || '';
+    } catch (e) { return ''; }
+  }
+
+  if (p.error || p.error_code || p.error_description) return show('t-expired');
+  if (!p.access_token) return show(p.type ? 't-other' : 't-home');
+  if (p.type === 'signup' || p.type === 'invite' || p.type === 'magiclink') return show('t-confirmed');
+  if (p.type !== 'recovery') return show('t-other');
+
+  // ---- Password reset ----
+  var token = p.access_token;
+  show('t-reset');
+  var who = emailFromToken(token);
+  if (who) document.getElementById('reset-for').textContent = 'For ' + who;
+  var form = document.getElementById('reset-form');
+  var pw1 = document.getElementById('pw1');
+  var pw2 = document.getElementById('pw2');
+  var msg = document.getElementById('reset-msg');
+  var btn = document.getElementById('reset-btn');
+  document.getElementById('showpw').addEventListener('change', function (e) {
+    pw1.type = pw2.type = e.target.checked ? 'text' : 'password';
+  });
+  function fail(text) { msg.textContent = text; msg.className = 'msg err'; btn.disabled = false; btn.textContent = 'Save new password'; }
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    msg.className = 'msg';
+    if (pw1.value.length < MIN_PASSWORD) return fail('Use at least ' + MIN_PASSWORD + ' characters.');
+    if (pw1.value !== pw2.value) return fail("Passwords don't match.");
+    btn.disabled = true; btn.textContent = 'Saving…';
+    fetch(SUPABASE_URL + '/auth/v1/user', {
+      method: 'PUT',
+      headers: { apikey: PUBLISHABLE_KEY, Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: pw1.value })
+    }).then(function (res) {
+      return res.json().catch(function () { return {}; }).then(function (body) {
+        if (res.ok) {
+          // End this browser session; the person signs in in the app.
+          fetch(SUPABASE_URL + '/auth/v1/logout', { method: 'POST', headers: { apikey: PUBLISHABLE_KEY, Authorization: 'Bearer ' + token } }).catch(function () {});
+          token = null;
+          return show('t-reset-done');
+        }
+        var m = String(body.msg || body.message || body.error_description || '').toLowerCase();
+        if (m.indexOf('different from the old') >= 0) return fail('Please choose a password you have not used before.');
+        if (m.indexOf('weak') >= 0 || m.indexOf('should be') >= 0) return fail('Please choose a stronger password.');
+        if (res.status === 401 || res.status === 403 || m.indexOf('expired') >= 0 || m.indexOf('session') >= 0)
+          return show('t-expired');
+        return fail('Something went wrong. Please try again.');
+      });
+    }).catch(function () { fail('No internet connection. Please try again.'); });
+  });
+})();
+</script>
+</body>
+</html>
